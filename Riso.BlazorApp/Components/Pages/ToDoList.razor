@@ -1,0 +1,105 @@
+﻿@page "/todo-list"
+@using Newtonsoft.Json
+@inject IJSRuntime JSRuntime
+
+<h3>ToDoList</h3>
+
+<div class="mb-3">
+	<label for="txtInput" class="form-label">Task Name</label>
+	<input type="text" class="form-control" @bind="TaskName">
+</div>
+
+<button type="button" class="btn btn-success" @onclick="Save">Save</button>
+
+@{
+	int count = 0;
+}
+<table class="table">
+	<thead>
+		<tr>
+			<th>No.</th>
+			<th>Id</th>
+			<th>TaskName</th>
+			<th>Status</th>
+		</tr>
+	</thead>
+	<tbody>
+		@foreach (var item in lst)
+		{
+			<tr>
+				<td>@(++count)</td>
+				<td>@item.Id</td>
+				<td>@item.TaskName</td>
+				<td>
+					@if (item.IsComplete)
+					{
+						<div class="form-check">
+							<input class="form-check-input" disabled type="checkbox" value="" id="checkChecked" checked>
+							<label class="form-check-label" for="checkChecked">
+								Completed
+							</label>
+						</div>
+					}
+					else
+					{
+						<div class="form-check">
+							<input class="form-check-input" disabled type="checkbox" value="" id="checkDefault">
+							<label class="form-check-label" for="checkDefault">
+								Pending
+							</label>
+						</div>
+					}
+				</td>
+			</tr>
+		}
+	</tbody>
+</table>
+
+@code {
+	private List<ToDoModel> lst = new List<ToDoModel>();
+	private string TaskName = "";
+
+	public class ToDoModel
+	{
+		public string Id { get; set; }
+		public string TaskName { get; set; }
+		public bool IsComplete { get; set; }
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			await BindData();
+		}
+	}
+
+	private async Task BindData()
+	{
+		// localstorage.getItem("todolist")
+		// localstorage.setItem("todolist", [])
+		var jsonStr = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "todolist");
+		if (jsonStr != null)
+		{
+			lst = JsonConvert.DeserializeObject<List<ToDoModel>>(jsonStr)!;
+			StateHasChanged();
+		}
+	}
+
+	private async Task Save()
+	{
+		lst.Add(new ToDoModel
+		{
+			Id = Guid.NewGuid().ToString(),
+			IsComplete = false,
+			TaskName = TaskName
+		});
+
+		var jsonStr = JsonConvert.SerializeObject(lst);
+		await JSRuntime.InvokeAsync<string>("localStorage.setItem", "todolist", jsonStr);
+
+		await BindData();
+
+		TaskName = string.Empty;
+	}
+}
