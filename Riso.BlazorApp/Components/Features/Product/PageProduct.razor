@@ -1,4 +1,5 @@
 ﻿@page "/product"
+@using Microsoft.EntityFrameworkCore
 @inject AppDbContext db
 
 <PageTitle>Product List</PageTitle>
@@ -31,6 +32,7 @@
 			<th>Product Name</th>
 			<th>Price</th>
 			<th>Quantity</th>
+			<th>Action</th>
 		</tr>
 	</thead>
 	<tbody>
@@ -43,18 +45,19 @@
 					<td>@item.ProductName</td>
 					<td>@item.Price</td>
 					<td>@item.Quantity</td>
+					<td>
+						<button class="btn btn-sm btn-warning me-2" @onclick="() => Edit(item.ProductId)">Edit</button>
+						<button class="btn btn-sm btn-danger" @onclick="() => Delete(item.ProductId)">Delete</button>
+					</td>
+
 				</tr>
 			}
 		}
 	</tbody>
 </table>
+
 <nav aria-label="Page navigation example">
 	<ul class="pagination">
-		@* <li class="page-item">
-			<a class="page-link" href="#" aria-label="Previous">
-				<span aria-hidden="true">&laquo;</span>
-			</a>
-		</li> *@
 		@for (int i = 1; i <= pageCount; i++)
 		{
 			int currentPageNo = i;
@@ -62,28 +65,7 @@
 			<li class="page-item @active">
 				<button class="page-link" type="button" @onclick="() => GoTo(currentPageNo)">@(i)</button>
 			</li>
-			@* if (i == pageNo)
-			{
-				<li class="page-item active">
-					<button class="page-link" type="button" @onclick="() => GoTo(currentPageNo)">@(i)</button>
-
-				</li>
-			}
-			else
-			{
-				<li class="page-item">
-					<button class="page-link" type="button" @onclick="() => GoTo(currentPageNo)">@(i)</button>
-				</li>
-			} *@
 		}
-		@* <li class="page-item"><a class="page-link" href="#">1</a></li>
-		<li class="page-item"><a class="page-link" href="#">2</a></li>
-		<li class="page-item"><a class="page-link" href="#">3</a></li> *@
-		@* <li class="page-item">
-			<a class="page-link" href="#" aria-label="Next">
-				<span aria-hidden="true">&raquo;</span>
-			</a>
-		</li> *@
 	</ul>
 </nav>
 
@@ -91,8 +73,8 @@
 	private int pageNo = 1;
 	private int pageSize = 10;
 	private int pageCount = 0;
-	private List<TblProduct> lst = new List<TblProduct>();
-	private TblProduct request = new TblProduct();
+	private List<TblProduct> lst = new();
+	private TblProduct request = new();
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -104,8 +86,10 @@
 		var query = db.TblProducts
 			.OrderByDescending(x => x.ProductId)
 			.Where(x => x.IsDelete == false);
-		var count = await query.CountAsync(); // 59
-		pageCount = count / pageSize; // 59 / 10 = 5
+
+		var count = await query.CountAsync();
+
+		pageCount = count / pageSize;
 		if (count % pageSize > 0)
 		{
 			pageCount++;
@@ -117,7 +101,7 @@
 			.ToListAsync();
 	}
 
-	private async Task GoTo(int currentPageNo) // click pageno
+	private async Task GoTo(int currentPageNo)
 	{
 		pageNo = currentPageNo;
 		await Reload();
@@ -138,17 +122,64 @@
 			});
 		}
 		await db.SaveChangesAsync();
+		await Reload();
 	}
 
 	private async Task Save()
 	{
-		request.CreatedBy = "System";
-		request.CreatedDate = DateTime.Now;
-		request.IsDelete = false;
-		db.TblProducts.Add(request);
-		await db.SaveChangesAsync();
+		if (request.ProductId == 0)
+		{
+			// Create new
+			request.CreatedBy = "System";
+			request.CreatedDate = DateTime.Now;
+			request.IsDelete = false;
+			db.TblProducts.Add(request);
+		}
+		else
+		{
+			// Update existing
+			var data = await db.TblProducts.FirstOrDefaultAsync(x => x.ProductId == request.ProductId);
+			if (data != null)
+			{
+				data.ProductName = request.ProductName;
+				data.Price = request.Price;
+				data.Quantity = request.Quantity;
+				data.ModifiedBy = "System";
+				data.ModifiedDate = DateTime.Now;
+			}
+		}
 
+		await db.SaveChangesAsync();
 		request = new TblProduct();
 		await Reload();
 	}
+
+	private async Task Edit(int id)
+	{
+		var data = await db.TblProducts.FirstOrDefaultAsync(x => x.ProductId == id);
+		if (data != null)
+		{
+			request = new TblProduct
+			{
+				ProductId = data.ProductId,
+				ProductName = data.ProductName,
+				Price = data.Price,
+				Quantity = data.Quantity
+			};
+		}
+	}
+
+	private async Task Delete(int id)
+	{
+		var data = await db.TblProducts.FirstOrDefaultAsync(x => x.ProductId == id);
+		if (data != null)
+		{
+			data.IsDelete = true;
+			data.ModifiedBy = "System";
+			data.ModifiedDate = DateTime.Now;
+			await db.SaveChangesAsync();
+			await Reload();
+		}
+	}
+
 }
