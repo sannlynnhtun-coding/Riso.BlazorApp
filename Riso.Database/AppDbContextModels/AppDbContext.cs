@@ -15,17 +15,43 @@ public partial class AppDbContext : DbContext
     {
     }
 
+    public virtual DbSet<TblCustomer> TblCustomers { get; set; }
+
     public virtual DbSet<TblLogin> TblLogins { get; set; }
 
     public virtual DbSet<TblProduct> TblProducts { get; set; }
 
     public virtual DbSet<TblUser> TblUsers { get; set; }
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+        => optionsBuilder.UseSqlServer("Server=.;Database=DAT_DB;User ID=sa;Password=12345;TrustServerCertificate=True;");
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<TblCustomer>(entity =>
+        {
+            entity.HasKey(e => e.CustomerId);
+
+            entity.ToTable("Tbl_Customer");
+
+            entity.Property(e => e.Address).HasMaxLength(200);
+            entity.Property(e => e.CreatedBy)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.CreatedDate).HasColumnType("datetime");
+            entity.Property(e => e.CustomerName).HasMaxLength(100);
+            entity.Property(e => e.Email).HasMaxLength(100);
+            entity.Property(e => e.ModifiedBy)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
+            entity.Property(e => e.Phone).HasMaxLength(20);
+        });
+
         modelBuilder.Entity<TblLogin>(entity =>
         {
-            entity.HasKey(e => e.LoginId).HasName("PK__Tbl_Logi__4DDA2818265B5D3B");
+            entity.HasKey(e => e.LoginId).HasName("PK__Tbl_Logi__4DDA28185EBD07FB");
 
             entity.ToTable("Tbl_Login");
 

@@ -1,0 +1,184 @@
+﻿@page "/customer"
+@using Microsoft.EntityFrameworkCore
+@inject AppDbContext db
+
+<PageTitle>Customer List</PageTitle>
+
+<h3>Customer List</h3>
+
+<!-- Input fields -->
+<div class="mb-3">
+    <label class="form-label">Customer Name</label>
+    <input type="text" class="form-control" @bind="request.CustomerName" placeholder="Enter customer name" />
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Email</label>
+    <input type="email" class="form-control" @bind="request.Email" placeholder="Enter email" />
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Phone</label>
+    <input type="text" class="form-control" @bind="request.Phone" placeholder="Enter phone number" />
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Address</label>
+    <input type="text" class="form-control" @bind="request.Address" placeholder="Enter address" />
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Product ID</label>
+    <input type="number" class="form-control" @bind="request.ProductId" placeholder="Enter product ID" />
+</div>
+
+<!-- Action buttons -->
+<button type="button" class="btn btn-outline-primary" @onclick="Reload">Reload</button>
+<button type="button" class="btn btn-success" @onclick="Save">Save</button>
+
+<!-- Table -->
+<table class="table table-bordered mt-3">
+    <thead>
+        <tr>
+            <th>No.</th>
+            <th>Customer Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Address</th>
+            <th>Product ID</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @{
+            int count = (pageNo - 1) * pageSize;
+            foreach (var item in lst)
+            {
+                <tr>
+                    <td>@(++count)</td>
+                    <td>@item.CustomerName</td>
+                    <td>@item.Email</td>
+                    <td>@item.Phone</td>
+                    <td>@item.Address</td>
+                    <td>@item.ProductId</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning me-2" @onclick="() => Edit(item.CustomerId)">Edit</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => Delete(item.CustomerId)">Delete</button>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+<!-- Pagination -->
+<nav aria-label="Page navigation example">
+    <ul class="pagination">
+        @for (int i = 1; i <= pageCount; i++)
+        {
+            int currentPageNo = i;
+            string active = i == pageNo ? "active" : "";
+            <li class="page-item @active">
+                <button class="page-link" type="button" @onclick="() => GoTo(currentPageNo)">@(i)</button>
+            </li>
+        }
+    </ul>
+</nav>
+
+@code {
+    private int pageNo = 1;
+    private int pageSize = 10;
+    private int pageCount = 0;
+    private List<TblCustomer> lst = new();
+    private TblCustomer request = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        var query = db.TblCustomers
+            .OrderByDescending(x => x.CustomerId)
+            .Where(x => x.IsDelete == false);
+
+        var count = await query.CountAsync();
+
+        pageCount = count / pageSize;
+        if (count % pageSize > 0)
+        {
+            pageCount++;
+        }
+
+        lst = await query
+            .Skip((pageNo - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+    }
+
+    private async Task GoTo(int currentPageNo)
+    {
+        pageNo = currentPageNo;
+        await Reload();
+    }
+
+    private async Task Save()
+    {
+        if (request.CustomerId == 0)
+        {
+            request.CreatedBy = "System";
+            request.CreatedDate = DateTime.Now;
+            request.IsDelete = false;
+            db.TblCustomers.Add(request);
+        }
+        else
+        {
+            var data = await db.TblCustomers.FirstOrDefaultAsync(x => x.CustomerId == request.CustomerId);
+            if (data != null)
+            {
+                data.CustomerName = request.CustomerName;
+                data.Email = request.Email;
+                data.Phone = request.Phone;
+                data.Address = request.Address;
+                data.ProductId = request.ProductId;
+                data.ModifiedBy = "System";
+                data.ModifiedDate = DateTime.Now;
+            }
+        }
+
+        await db.SaveChangesAsync();
+        request = new TblCustomer();
+        await Reload();
+    }
+
+    private async Task Edit(int id)
+    {
+        var data = await db.TblCustomers.FirstOrDefaultAsync(x => x.CustomerId == id);
+        if (data != null)
+        {
+            request = new TblCustomer
+            {
+                CustomerId = data.CustomerId,
+                CustomerName = data.CustomerName,
+                Email = data.Email,
+                Phone = data.Phone,
+                Address = data.Address,
+                ProductId = data.ProductId
+            };
+        }
+    }
+
+    private async Task Delete(int id)
+    {
+        var data = await db.TblCustomers.FirstOrDefaultAsync(x => x.CustomerId == id);
+        if (data != null)
+        {
+            data.IsDelete = true;
+            data.ModifiedBy = "System";
+            data.ModifiedDate = DateTime.Now;
+            await db.SaveChangesAsync();
+            await Reload();
+        }
+    }
+}
