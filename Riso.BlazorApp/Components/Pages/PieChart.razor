@@ -1,0 +1,62 @@
+﻿@page "/pie-chart"
+@inject IJSRuntime JSRuntime
+
+<h3>Pie Chart</h3>
+
+<div id="container"></div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            List<PieChartModel> pieChartData = new List<PieChartModel>
+{
+    new PieChartModel
+    {
+        name = "Water",
+        sliced = false,
+        selected = false,
+        y = 55.02m
+    },
+    new PieChartModel
+    {
+        name = "Fat",
+        sliced = true,
+        selected = true,
+        y = 26.71m
+    },
+    new PieChartModel
+    {
+        name = "Carbohydrates",
+        sliced = false,
+        selected = false,
+        y = 1.09m
+    },
+    new PieChartModel
+    {
+        name = "Protein",
+        sliced = false,
+        selected = false,
+        y = 15.5m
+    },
+    new PieChartModel
+    {
+        name = "Ash",
+        sliced = false,
+        selected = false,
+        y = 1.68m
+    }
+};
+            await JSRuntime.InvokeVoidAsync("bindPieChart", pieChartData);
+        }
+	}
+
+	public class PieChartModel
+	{
+		public string name { get; set; }
+		public bool sliced { get; set; }
+		public bool selected { get; set; }
+		public decimal y { get; set; }
+	}
+}
