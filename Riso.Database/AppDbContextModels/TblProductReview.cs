@@ -3,15 +3,19 @@ using System.Collections.Generic;
 
 namespace Riso.Database.AppDbContextModels;
 
-public partial class TblProduct
+public partial class TblProductReview
 {
+    public int ReviewId { get; set; }
+
     public int ProductId { get; set; }
 
-    public string ProductName { get; set; } = null!;
+    public int UserId { get; set; }
 
-    public decimal Price { get; set; }
+    public int Rating { get; set; }
 
-    public int Quantity { get; set; }
+    public string? ReviewTitle { get; set; }
+
+    public string? ReviewText { get; set; }
 
     public string? CreatedBy { get; set; }
 
@@ -21,5 +25,5 @@ public partial class TblProduct
 
     public DateTime? ModifiedDate { get; set; }
 
-    public bool IsDelete { get; set; }
+    public bool IsApproved { get; set; }
 }
