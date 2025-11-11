@@ -1,0 +1,186 @@
+﻿@page "/productcategory"
+@using Microsoft.EntityFrameworkCore
+@inject AppDbContext db
+
+<PageTitle>Product Category List</PageTitle>
+
+<h3>Product Category List</h3>
+
+<div class="mb-3">
+    <label class="form-label">Category Name</label>
+    <input type="text" class="form-control" @bind="request.ProductCategoryName" placeholder="Enter category name" />
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Category Code</label>
+    <input type="text" class="form-control" @bind="request.ProductCategoryCode" placeholder="Enter category code" />
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Description</label>
+    <textarea class="form-control" @bind="request.Description" placeholder="Enter description"></textarea>
+</div>
+
+@* <button type="button" class="btn btn-outline-success" @onclick="Generate">Generate</button> *@
+<button type="button" class="btn btn-outline-primary" @onclick="Reload">Reload</button>
+<button type="button" class="btn btn-success" @onclick="Save">Save</button>
+
+<table class="table table-bordered mt-3">
+    <thead>
+        <tr>
+            <th>No.</th>
+            <th>Category Name</th>
+            <th>Category Code</th>
+            <th>Description</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @{
+            int count = (pageNo - 1) * pageSize;
+            foreach (var item in lst)
+            {
+                <tr>
+                    <td>@(++count)</td>
+                    <td>@item.ProductCategoryName</td>
+                    <td>@item.ProductCategoryCode</td>
+                    <td>@item.Description</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning me-2" @onclick="() => Edit(item.ProductCategoryId)">Edit</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => Delete(item.ProductCategoryId)">Delete</button>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+<nav aria-label="Page navigation example">
+    <ul class="pagination">
+        @for (int i = 1; i <= pageCount; i++)
+        {
+            int currentPageNo = i;
+            string active = i == pageNo ? "active" : "";
+            <li class="page-item @active">
+                <button class="page-link" type="button" @onclick="() => GoTo(currentPageNo)">@(i)</button>
+            </li>
+        }
+    </ul>
+</nav>
+
+@code {
+    private int pageNo = 1;
+    private int pageSize = 10;
+    private int pageCount = 0;
+    private List<TblProductCategory> lst = new();
+    private TblProductCategory request = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        var query = db.TblProductCategories
+            .OrderByDescending(x => x.ProductCategoryId)
+            .Where(x => x.IsDelete == false);
+
+        var count = await query.CountAsync();
+
+        pageCount = count / pageSize;
+        if (count % pageSize > 0)
+        {
+            pageCount++;
+        }
+
+        lst = await query
+            .Skip((pageNo - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+    }
+
+    private async Task GoTo(int currentPageNo)
+    {
+        pageNo = currentPageNo;
+        await Reload();
+    }
+
+    // private async Task Generate()
+    // {
+    //     for (int i = 0; i < 5; i++)
+    //     {
+    //         db.TblProductCategories.Add(new TblProductCategory
+    //         {
+    //             ProductCategoryName = $"Category {i + 1}",
+    //             ProductCategoryCode = $"CAT{i + 1:D3}",
+    //             Description = $"Auto-generated category {i + 1}",
+    //             CreatedBy = "System",
+    //             CreatedByDate = DateTime.Now,
+    //             IsDelete = false
+    //         });
+    //     }
+    //     await db.SaveChangesAsync();
+    //     await Reload();
+    // }
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(request.ProductCategoryName) || string.IsNullOrWhiteSpace(request.ProductCategoryCode))
+            return;
+
+        if (request.ProductCategoryId == 0)
+        {
+            // Create new
+            request.CreatedBy = "System";
+            request.CreatedByDate = DateTime.Now;
+            request.IsDelete = false;
+            db.TblProductCategories.Add(request);
+        }
+        else
+        {
+            // Update existing
+            var data = await db.TblProductCategories.FirstOrDefaultAsync(x => x.ProductCategoryId == request.ProductCategoryId);
+            if (data != null)
+            {
+                data.ProductCategoryName = request.ProductCategoryName;
+                data.ProductCategoryCode = request.ProductCategoryCode;
+                data.Description = request.Description;
+                data.ModifiedBy = "System";
+                data.ModifiedDate = DateTime.Now;
+            }
+        }
+
+        await db.SaveChangesAsync();
+        request = new TblProductCategory();
+        await Reload();
+    }
+
+    private async Task Edit(int id)
+    {
+        var data = await db.TblProductCategories.FirstOrDefaultAsync(x => x.ProductCategoryId == id);
+        if (data != null)
+        {
+            request = new TblProductCategory
+            {
+                ProductCategoryId = data.ProductCategoryId,
+                ProductCategoryName = data.ProductCategoryName,
+                ProductCategoryCode = data.ProductCategoryCode,
+                Description = data.Description
+            };
+        }
+    }
+
+    private async Task Delete(int id)
+    {
+        var data = await db.TblProductCategories.FirstOrDefaultAsync(x => x.ProductCategoryId == id);
+        if (data != null)
+        {
+            data.IsDelete = true;
+            data.ModifiedBy = "System";
+            data.ModifiedDate = DateTime.Now;
+            await db.SaveChangesAsync();
+            await Reload();
+        }
+    }
+}

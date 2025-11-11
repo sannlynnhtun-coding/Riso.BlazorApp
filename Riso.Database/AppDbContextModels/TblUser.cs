@@ -5,7 +5,7 @@ namespace Riso.Database.AppDbContextModels;
 
 public partial class TblUser
 {
-    public Guid UserId { get; set; }
+    public int UserId { get; set; }
 
     public string UserName { get; set; } = null!;
 
